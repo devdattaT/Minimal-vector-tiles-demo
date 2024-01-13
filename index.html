@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Vector Tiles Demo</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .filter-ctrl {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map">
+        <div class="filter-ctrl">
+            <input id="filter-input" type="text" name="filter" placeholder="State Name">
+        </div>
+    </div>
+    <script>
+
+        //debounce function
+        function debounce(func, timeout = 300) {
+            let timer;
+            return (...args) => {
+                clearTimeout(timer);
+                timer = setTimeout(() => { func.apply(this, args); }, timeout);
+            };
+        }
+
+        function showDistByState() {
+            const filterInput = document.getElementById('filter-input');
+            const stateName = filterInput.value;
+            const newURL = `http://localhost:3000/dist_state_search?nm=${stateName}`;
+
+            //set as source url
+            map.getSource('districts-vt').setUrl(newURL);
+        }
+        const processName = debounce(() => showDistByState());
+
+
+
+        mapboxgl.accessToken = 'Enter your Key Here';
+        const map = new mapboxgl.Map({
+            container: 'map', // container ID
+            // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
+            style: 'mapbox://styles/mapbox/satellite-v9', // style URL
+            center: [75, 19], // starting position [lng, lat]
+            zoom: 6 // starting zoom
+        });
+        map.on('load', () => {
+            //add code for additional layers
+
+            //add source for districts
+            map.addSource('districts-vt', {
+                type: 'vector',
+                url: 'http://localhost:3000/districts'
+            });
+            map.addSource('roads-vt', {
+                type: 'vector',
+                url: 'http://localhost:3000/roads'
+            });
+
+            //add As Layer
+            map.addLayer({
+                id: 'Districts',
+                type: 'fill',
+                'paint': {
+                    'fill-color': '#0080ff',
+                    'fill-opacity': 0.5,
+                    'fill-outline-color': "#000"
+                },
+                source: 'districts-vt',
+                'source-layer': 'districts'
+            });
+            //Roads
+            map.addLayer({
+                id: 'maj-Roads',
+                type: 'line',
+                'paint': {
+                    'line-color': '#f00',
+                    'line-width': 2
+                },
+                source: 'roads-vt',
+                'source-layer': 'roads',
+                filter: ['==', 'nh_name', 'Golden_EW']
+            });
+
+            map.addLayer({
+                id: 'min-Roads',
+                type: 'line',
+                'paint': {
+                    'line-color': '#ddd',
+                    'line-width': 1
+                },
+                source: 'roads-vt',
+                'source-layer': 'roads',
+                filter: ['!=', 'nh_name', 'Golden_EW']
+            });
+
+            const filterInput = document.getElementById('filter-input');
+            filterInput.addEventListener('keyup', processName);
+        });
+
+    </script>
+
+</body>
+
+</html>
